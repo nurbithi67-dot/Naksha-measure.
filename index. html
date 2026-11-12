@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ভূমি জরিপ ক্যালকুলেটর</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2f855a">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', 'Noto Sans Bengali', sans-serif;
+    background: #f0f4f8; color: #1a202c; padding: 16px;
+    max-width: 720px; margin: 0 auto; line-height: 1.6;
+  }
+  h1 { font-size: 1.4rem; text-align: center; color: #1e4d2b; margin-bottom: 4px; }
+  .sub { text-align: center; font-size: .85rem; color: #4a5568; margin-bottom: 16px; }
+  .card {
+    background: #fff; border-radius: 12px; padding: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 16px;
+  }
+  .card h2 { font-size: 1rem; color: #1e4d2b; margin-bottom: 12px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+  label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 4px; color: #2d3748; }
+  input, select {
+    width: 100%; padding: 10px 12px; border: 1.5px solid #cbd5e0;
+    border-radius: 8px; font-size: 1rem; margin-bottom: 10px;
+    background: #f9fafb; transition: border .2s;
+  }
+  input:focus, select:focus { outline: none; border-color: #38a169; background: #fff; }
+  .row { display: flex; gap: 10px; }
+  .row > div { flex: 1; }
+  button {
+    width: 100%; padding: 12px; border: none; border-radius: 8px;
+    font-size: 1rem; font-weight: 700; cursor: pointer; transition: .2s;
+  }
+  .btn-primary { background: #2f855a; color: #fff; }
+  .btn-primary:hover { background: #276749; }
+  .btn-clear { background: #edf2f7; color: #4a5568; margin-top: 8px; }
+  .btn-clear:hover { background: #e2e8f0; }
+  .result {
+    background: #f0fff4; border: 1.5px solid #9ae6b4;
+    border-radius: 8px; padding: 12px; margin-top: 12px; display: none;
+  }
+  .result.show { display: block; }
+  .result .big { font-size: 1.3rem; font-weight: 800; color: #22543d; }
+  .result table { width: 100%; margin-top: 8px; font-size: .85rem; border-collapse: collapse; }
+  .result td { padding: 4px 0; border-bottom: 1px dashed #c6f6d5; }
+  .result td:last-child { text-align: right; font-weight: 700; color: #22543d; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .tab {
+    flex: 1; min-width: 80px; padding: 8px 6px; text-align: center;
+    background: #edf2f7; border-radius: 8px; cursor: pointer;
+    font-size: .8rem; font-weight: 700; color: #4a5568; transition: .2s;
+  }
+  .tab.active { background: #2f855a; color: #fff; }
+  .section { display: none; }
+  .section.active { display: block; }
+  .hint { font-size: .75rem; color: #718096; margin-bottom: 10px; }
+  .error { color: #c53030; font-size: .8rem; margin-top: 6px; display: none; }
+  .error.show { display: block; }
+  .coords-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .coords-row span { font-size: .8rem; width: 50px; color: #4a5568; font-weight: 600; }
+  .coords-row input { margin-bottom: 0; }
+  .btn-small { width: auto; padding: 6px 12px; font-size: .8rem; background: #edf2f7; color: #4a5568; border-radius: 6px; }
+  @media print {
+    body * { visibility: hidden; }
+    #print-area, #print-area * { visibility: visible; }
+    #print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; background: #fff; }
+    #print-area > div { page-break-inside: avoid; }
+    .no-print { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<h1>🏞️ ভূমি জরিপ ক্যালকুলেটর</h1>
+<p class="sub">জমির ক্ষেত্রফল ও একক রূপান্তর</p>
+
+<!-- ============ ক্ষেত্রফল গণনা ============ -->
+<div class="card">
+  <h2>ক্ষেত্রফল গণনা</h2>
+  <div class="tabs">
+    <div class="tab active" data-tab="tri">ত্রিভুজ</div>
+    <div class="tab" data-tab="quad">চতুর্ভুজ</div>
+    <div class="tab" data-tab="poly">বহুভুজ</div>
+  </div>
+
+  <div class="section active" id="sec-tri">
+    <p class="hint">তিন বাহুর দৈর্ঘ্য দিন (মিটারে) — হারনের সূত্র ব্যবহার হবে</p>
+    <label>বাহু a (মিটার)</label>
+    <input type="number" id="tri-a" step="any" placeholder="যেমন ৩০">
+    <label>বাহু b (মিটার)</label>
+    <input type="number" id="tri-b" step="any" placeholder="যেমন ৪০">
+    <label>বাহু c (মিটার)</label>
+    <input type="number" id="tri-c" step="any" placeholder="যেমন ৫০">
+    <button class="btn-primary" onclick="calcTriangle()">হিসাব করুন</button>
+  </div>
+
+  <div class="section" id="sec-quad">
+    <p class="hint">একটি কর্ণ দিয়ে দুটি ত্রিভুজে ভাগ করে গণনা হবে</p>
+    <div class="row">
+      <div><label>বাহু a</label><input type="number" id="q-a" step="any" placeholder="মিটার"></div>
+      <div><label>বাহু b</label><input type="number" id="q-b" step="any" placeholder="মিটার"></div>
+    </div>
+    <div class="row">
+      <div><label>বাহু c</label><input type="number" id="q-c" step="any" placeholder="মিটার"></div>
+      <div><label>বাহু d</label><input type="number" id="q-d" step="any" placeholder="মিটার"></div>
+    </div>
+    <label>কর্ণ (দুই কোণার মধ্যে দূরত্ব)</label>
+    <input type="number" id="q-diag" step="any" placeholder="মিটার">
+    <button class="btn-primary" onclick="calcQuad()">হিসাব করুন</button>
+  </div>
+
+  <div class="section" id="sec-poly">
+    <p class="hint">প্রতিটি কোণার (x, y) স্থানাঙ্ক দিন — শু-লেস ফর্মুলা ব্যবহার হবে</p>
+    <div id="coord-list"></div>
+    <button class="btn-small" onclick="addCoord()">+ নতুন বিন্দু</button>
+    <button class="btn-primary" style="margin-top:10px" onclick="calcPoly()">হিসাব করুন</button>
+  </div>
+
+  <div class="error" id="calc-error"></div>
+
+  <div class="result" id="area-result">
+    <div class="big" id="area-main"></div>
+    <table>
+      <tr><td>বর্গফুট</td><td id="r-sqft"></td></tr>
+      <tr><td>বর্গমিটার</td><td id="r-sqm"></td></tr>
+      <tr><td>শতক</td><td id="r-shotok"></td></tr>
+      <tr><td>কাঠা</td><td id="r-katha"></td></tr>
+      <tr><td>বিঘা</td><td id="r-bigha"></td></tr>
+      <tr><td>একর</td><td id="r-acre"></td></tr>
+    </table>
+    <div id="diagram-box" style="margin-top:12px;text-align:center;">
+      <svg id="diagram-svg" width="100%" height="220" viewBox="0 0 320 220" style="max-width:400px;"></svg>
+    </div>
+    <button class="btn-clear" style="margin-top:10px;" onclick="printResult()">🖨️ প্রিন্ট / PDF</button>
+  </div>
+</div>
+
+<!-- ============ লিংক স্কেল (মৌজা নকশা) ============ -->
+<div class="card">
+  <h2>লিংক স্কেল (মৌজা নকশা)</h2>
+  <label>নকশার স্কেল</label>
+  <select id="map-scale" onchange="updateScaleInfo()">
+    <option value="16" selected>১৬" = ১ মাইল (গুনিয়া ১ ছোট ঘর = ১০ লিংক)</option>
+    <option value="32">৩২" = ১ মাইল (গুনিয়া ১ ছোট ঘর = ৫ লিংক)</option>
+    <option value="64">৬৪" = ১ মাইল (গুনিয়া ১ ছোট ঘর = ২.৫ লিংক)</option>
+    <option value="80">৮০" = ১ মাইল (গুনিয়া ১ ছোট ঘর = ২ লিংক)</option>
+  </select>
+  <p class="hint" id="scale-info">সরাসরি লিংক সংখ্যা ইনপুট করুন (গুনিয়া স্কেলের পাঠ অনুযায়ী)</p>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="link-offset">অফসেট</div>
+    <div class="tab" data-tab="link-tri">ত্রিভুজ লিংক</div>
+    <div class="tab" data-tab="link-angle">দুই বাহু+কোণ</div>
+  </div>
+
+  <div class="section active" id="sec-link-offset">
+    <p class="hint">বেস লাইন বরাবর দূরত্ব এবং সংশ্লিষ্ট অফসেট (সবই লিংক সংখ্যা) ইনপুট করুন</p>
+    <div id="offset-list"></div>
+    <button class="btn-small" onclick="addOffset()">+ নতুন অফসেট</button>
+    <button class="btn-primary" style="margin-top:10px" onclick="calcLinkOffset()">হিসাব করুন</button>
+  </div>
+
+  <div class="section" id="sec-link-tri">
+    <p class="hint">তিন বাহুর লিংক সংখ্যা ইনপুট করুন</p>
+    <div class="row">
+      <div><label>বাহু a (লিংক)</label><input type="number" id="lt-a" step="any" placeholder="লিংক সংখ্যা"></div>
+      <div><label>বাহু b (লিংক)</label><input type="number" id="lt-b" step="any" placeholder="লিংক সংখ্যা"></div>
+    </div>
+    <label>বাহু c (লিংক)</label>
+    <input type="number" id="lt-c" step="any" placeholder="লিংক সংখ্যা">
+    <button class="btn-primary" onclick="calcLinkTri()">হিসাব করুন</button>
+  </div>
+
+  <div class="section" id="sec-link-angle">
+    <p class="hint">দুই বাহুর লিংক সংখ্যা এবং মধ্যবর্তী কোণ (ডিগ্রি) ইনপুট করুন</p>
+    <div class="row">
+      <div><label>বাহু a (লিংক)</label><input type="number" id="la-a" step="any" placeholder="লিংক সংখ্যা"></div>
+      <div><label>বাহু b (লিংক)</label><input type="number" id="la-b" step="any" placeholder="লিংক সংখ্যা"></div>
+    </div>
+    <label>মধ্যবর্তী কোণ (ডিগ্রি)</label>
+    <input type="number" id="la-angle" step="any" placeholder="যেমন ৯০">
+    <button class="btn-primary" onclick="calcLinkAngle()">হিসাব করুন</button>
+  </div>
+
+  <div class="error" id="link-error"></div>
+</div>
+
+<!-- ============ একক রূপান্তর ============ -->
+<div class="card">
+  <h2>একক রূপান্তর</h2>
+  <div class="row">
+    <div>
+      <label>মান</label>
+      <input type="number" id="conv-val" step="any" placeholder="০" oninput="doConvert()">
+    </div>
+    <div>
+      <label>একক</label>
+      <select id="conv-unit" onchange="doConvert()">
+        <option value="sqm">বর্গমিটার</option>
+        <option value="sqft">বর্গফুট</option>
+        <option value="shotok">শতক</option>
+        <option value="katha">কাঠা</option>
+        <option value="bigha">বিঘা</option>
+        <option value="acre">একর</option>
+        <option value="hectare">হেক্টর</option>
+      </select>
+    </div>
+  </div>
+  <div class="result" id="conv-result">
+    <table>
+      <tr><td>বর্গফুট</td><td id="c-sqft"></td></tr>
+      <tr><td>বর্গমিটার</td><td id="c-sqm"></td></tr>
+      <tr><td>শতক</td><td id="c-shotok"></td></tr>
+      <tr><td>কাঠা</td><td id="c-katha"></td></tr>
+      <tr><td>বিঘা</td><td id="c-bigha"></td></tr>
+      <tr><td>একর</td><td id="c-acre"></td></tr>
+      <tr><td>হেক্টর</td><td id="c-hectare"></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============ ইতিহাস ============ -->
+<div class="card">
+  <h2>গণনার ইতিহাস</h2>
+  <p class="hint">সর্বশেষ ২০টি গণনা স্বয়ংক্রিয়ভাবে সংরক্ষিত থাকে</p>
+  <div id="history-list"></div>
+  <div class="row" style="margin-bottom:8px;margin-top:8px;">
+    <div style="flex:1;">
+      <label style="font-size:.8rem;">প্রিন্ট করবেন কতটি?</label>
+      <select id="print-count" style="margin-bottom:0;">
+        <option value="5">সর্বশেষ ৫টি</option>
+        <option value="10" selected>সর্বশেষ ১০টি</option>
+        <option value="20">সর্বশেষ ২০টি</option>
+        <option value="all">সবগুলো</option>
+      </select>
+    </div>
+  </div>
+  <button class="btn-primary" style="margin-bottom:8px;" onclick="printAllHistory()">🖨️ সব PDF একসাথে</button>
+  <button class="btn-clear" onclick="clearHistory()">🗑️ সব ইতিহাস মুছুন</button>
+</div>
+
+<script>
+/* ================= ধ্রুবক ================= */
+const SQM_PER_SHOTOK = 40.4686;
+const SHOTOK_PER_KATHA = 1.65;
+const KATHA_PER_BIGHA = 20;
+const SHOTOK_PER_ACRE = 100;
+const SQM_PER_ACRE = 4046.86;
+const SQM_PER_HECTARE = 10000;
+const SQM_PER_SQFT = 0.092903;
+const LINK_TO_METER = 0.201168;
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/* ================= হেল্পার ================= */
+function num(id) { const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; }
+function fmt(n) {
+  if (n === null || isNaN(n)) return '—';
+  return n.toLocaleString('bn-BD', { maximumFractionDigits: 4 });
+}
+function showError(msg) { const e = document.getElementById('calc-error'); e.textContent = msg; e.classList.add('show'); }
+function clearError() { document.getElementById('calc-error').classList.remove('show'); }
+function hideResult() { document.getElementById('area-result').classList.remove('show'); clearError(); }
+function heron(a, b, c) { const s = (a+b+c)/2; const val = s*(s-a)*(s-b)*(s-c); return val > 0 ? Math.sqrt(val) : NaN; }
+
+/* ================= বাংলা তারিখ ================= */
+const BN_MONTHS = ['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
+const BN_DIGITS = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
+function toBnDigits(str) { return String(str).replace(/[0-9]/g, d => BN_DIGITS[d]); }
+function formatBanglaDate(date) {
+  const day = toBnDigits(date.getDate());
+  const month = BN_MONTHS[date.getMonth()];
+  const year = toBnDigits(date.getFullYear());
+  let h = date.getHours(); const m = date.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12; if (h === 0) h = 12;
+  const timeStr = `${toBnDigits(h)}:${toBnDigits(String(m).padStart(2,'0'))} ${ampm}`;
+  return `${day} ${month} ${year}, ${timeStr}`;
+}
+function displayTime(storedTime) {
+  if (!storedTime) return '';
+  const str = String(storedTime);
+  if (/[অ-৯]/.test(str)) return str;
+  const dateMatch = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (!dateMatch) { const d = new Date(str); return isNaN(d) ? str : formatBanglaDate(d); }
+  const day = parseInt(dateMatch[1],10);
+  const monthIdx = parseInt(dateMatch[2],10) - 1;
+  const year = parseInt(dateMatch[3],10);
+  const timeMatch = str.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?/i);
+  let hour = 0, minute = 0, ampm = '';
+  if (timeMatch) {
+    hour = parseInt(timeMatch[1],10); minute = parseInt(timeMatch[2],10);
+    ampm = (timeMatch[4] || '').toUpperCase();
+    if (!ampm) { if (hour >= 12) { ampm='PM'; if (hour>12) hour-=12; } else { ampm='AM'; if (hour===0) hour=12; } }
+  }
+  return `${toBnDigits(day)} ${BN_MONTHS[monthIdx]||''} ${toBnDigits(year)}, ${toBnDigits(hour)}:${toBnDigits(String(minute).padStart(2,'0'))} ${ampm}`;
+}
+
+/* ================= চিত্র (SVG) ================= */
+function clearDiagram() {
+  const svg = document.getElementById('diagram-svg');
+  if (svg) while (svg.firstChild) svg.removeChild(svg.firstChild);
+}
+function svgEl(tag, attrs, text) {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  if (text !== undefined) el.textContent = text;
+  return el;
+}
+function fitPoints(pts, w, h, pad) {
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const spanX = maxX - minX || 1, spanY = maxY - minY || 1;
+  const scale = Math.min((w-2*pad)/spanX, (h-2*pad)/spanY);
+  const offX = (w - spanX*scale)/2, offY = (h - spanY*scale)/2;
+  return pts.map(([x,y]) => [offX + (x-minX)*scale, h - (offY + (y-minY)*scale)]);
+}
+function drawShape(points, edgeLabels, areaText) {
+  clearDiagram();
+  const svg = document.getElementById('diagram-svg');
+  if (!svg) return;
+  svg.setAttribute('style','-webkit-print-color-adjust:exact;print-color-adjust:exact;');
+  const W = 320, H = 220, PAD = 30;
+  const fitted = fitPoints(points, W, H, PAD);
+  const d = fitted.map((p,i) => (i===0?'M':'L') + p[0] + ',' + p[1]).join(' ') + ' Z';
+  svg.appendChild(svgEl('path', { d, fill:'rgba(47,133,90,.12)', stroke:'#2f855a', 'stroke-width':2 }));
+  if (edgeLabels && edgeLabels.length === fitted.length) {
+    for (let i = 0; i < fitted.length; i++) {
+      const p1 = fitted[i], p2 = fitted[(i+1)%fitted.length];
+      const mx = (p1[0]+p2[0])/2, my = (p1[1]+p2[1])/2;
+      svg.appendChild(svgEl('text', { x:mx, y:my-6, 'text-anchor':'middle', 'font-size':'9', 'font-weight':'700', fill:'#1e4d2b' }, edgeLabels[i]));
+    }
+  }
+  const cx = fitted.reduce((s,p)=>s+p[0],0)/fitted.length;
+  const cy = fitted.reduce((s,p)=>s+p[1],0)/fitted.length;
+  svg.appendChild(svgEl('text', { x:cx, y:cy+4, 'text-anchor':'middle', 'font-size':'9', 'font-weight':'800', fill:'#22543d' }, areaText));
+}
+function linkLabel(linkVal) { return `${fmt(linkVal)}L (${fmt(linkVal*0.66)}ft)`; }
+function areaLabel(sqm) {
+  const shotok = sqm / SQM_PER_SHOTOK;
+  const katha = shotok / SHOTOK_PER_KATHA;
+  return `${fmt(shotok)} শতাংশ (≈ ${fmt(katha)} কাঠা)`;
+}
+function trianglePoints(a, b, c) {
+  const A = [0,0], B = [a,0];
+  const x = (b*b + a*a - c*c)/(2*a);
+  const y = Math.sqrt(Math.max(0, b*b - x*x));
+  return [A, B, [x,y]];
+}
+function quadPoints(a, b, c, d, diag) {
+  const A = [0,0], B = [a,0];
+  const xC = (b*b + a*a - diag*diag)/(2*a);
+  const yC = Math.sqrt(Math.max(0, b*b - xC*xC));
+  const C = [xC, yC];
+  const dx = C[0]-B[0], dy = C[1]-B[1];
+  const distBC = Math.sqrt(dx*dx+dy*dy) || 1;
+  const xD = (c*c - d*d + distBC*distBC)/(2*distBC);
+  const yD = Math.sqrt(Math.max(0, c*c - xD*xD));
+  const ux = dx/distBC, uy = dy/distBC;
+  const px = -uy, py = ux;
+  return [A, B, C, [B[0]+xD*ux+yD*px, B[1]+xD*uy+yD*py]];
+}
+
+/* ================= ফলাফল ================= */
+function showArea(sqm, historyLabel, historyDetail, diagramFn) {
+  if (isNaN(sqm) || sqm <= 0) { showError('দয়া করে সঠিক মান দিন।'); return; }
+  clearError();
+  const sqft = sqm / SQM_PER_SQFT;
+  const shotok = sqm / SQM_PER_SHOTOK;
+  const katha = shotok / SHOTOK_PER_KATHA;
+  const bigha = katha / KATHA_PER_BIGHA;
+  const acre = sqm / SQM_PER_ACRE;
+  document.getElementById('area-main').innerHTML =
+    `${fmt(sqft)} বর্গফুট <span style="font-size:.85rem;font-weight:600;color:#4a5568;">(≈ ${fmt(sqm)} বর্গমিটার)</span>`;
+  document.getElementById('r-sqft').textContent = fmt(sqft);
+  document.getElementById('r-sqm').textContent = fmt(sqm);
+  document.getElementById('r-shotok').textContent = fmt(shotok);
+  document.getElementById('r-katha').textContent = fmt(katha);
+  document.getElementById('r-bigha').textContent = fmt(bigha);
+  document.getElementById('r-acre').textContent = fmt(acre);
+  document.getElementById('area-result').classList.add('show');
+  if (typeof diagramFn === 'function') diagramFn(sqm); else clearDiagram();
+  if (historyLabel) {
+    const diagData = diagramFn && diagramFn.diagramData ? diagramFn.diagramData : null;
+    saveHistory(historyLabel, historyDetail || '', sqm, diagData);
+  }
+}
+
+/* ================= গণনা ================= */
+function calcTriangle() {
+  const a = num('tri-a'), b = num('tri-b'), c = num('tri-c');
+  if (!a || !b || !c) { showError('তিনটি বাহুর মান দিন।'); return; }
+  if (a+b<=c || a+c<=b || b+c<=a) { showError('ত্রিভুজের অসমতা মেনে চলুন।'); return; }
+  const area = heron(a,b,c);
+  const toLink = m => m/LINK_TO_METER;
+  const pts = trianglePoints(a,b,c);
+  const labels = ['a='+linkLabel(toLink(a)), 'c='+linkLabel(toLink(c)), 'b='+linkLabel(toLink(b))];
+  const dg = (sqm) => drawShape(pts, labels, areaLabel(sqm));
+  dg.diagramData = { type:'poly', points:pts, labels };
+  showArea(area, 'ত্রিভুজ', `বাহু: ${a}, ${b}, ${c} মিটার`, dg);
+}
+function calcQuad() {
+  const a = num('q-a'), b = num('q-b'), c = num('q-c'), d = num('q-d'), diag = num('q-diag');
+  if (!a||!b||!c||!d||!diag) { showError('চার বাহু ও কর্ণের মান দিন।'); return; }
+  const t1 = heron(a,b,diag), t2 = heron(c,d,diag);
+  if (isNaN(t1)||isNaN(t2)) { showError('কর্ণের মান দিয়ে ত্রিভুজ গঠন হচ্ছে না।'); return; }
+  const toLink = m => m/LINK_TO_METER;
+  const pts = quadPoints(a,b,c,d,diag);
+  const labels = ['a='+linkLabel(toLink(a)),'b='+linkLabel(toLink(b)),'c='+linkLabel(toLink(c)),'d='+linkLabel(toLink(d))];
+  const dg = (sqm) => drawShape(pts, labels, areaLabel(sqm));
+  dg.diagramData = { type:'poly', points:pts, labels };
+  showArea(t1+t2, 'চতুর্ভুজ', `বাহু: ${a}, ${b}, ${c}, ${d} | কর্ণ: ${diag}`, dg);
+}
+function calcPoly() {
+  const rows = document.querySelectorAll('#coord-list .coords-row');
+  const pts = [];
+  rows.forEach(r => {
+    const x = parseFloat(r.querySelector('.cx').value);
+    const y = parseFloat(r.querySelector('.cy').value);
+    if (!isNaN(x) && !isNaN(y)) pts.push([x,y]);
+  });
+  if (pts.length < 3) { showError('কমপক্ষে ৩টি বিন্দুর স্থানাঙ্ক দিন।'); return; }
+  let sum = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [x1,y1] = pts[i], [x2,y2] = pts[(i+1)%pts.length];
+    sum += (x1*y2 - x2*y1);
+  }
+  const area = Math.abs(sum)/2;
+  const dg = (sqm) => drawShape(pts, null, areaLabel(sqm));
+  dg.diagramData = { type:'poly', points:pts, labels:null };
+  showArea(area, 'বহুভুজ', `${pts.length}টি বিন্দুর স্থানাঙ্ক`, dg);
+}
+
+/* ================= লিংক স্কেল ================= */
+function updateScaleInfo() {
+  const inches = parseFloat(document.getElementById('map-scale').value);
+  const linksPerInch = 8000/inches;
+  const linksPerSmallDiv = linksPerInch/50;
+  document.getElementById('scale-info').textContent =
+    `১ ইঞ্চি = ${linksPerInch} লিংক | গুনিয়া ছোট ঘর ≈ ${linksPerSmallDiv.toFixed(1)} লিংক`;
+}
+let offsetCount = 0;
+function addOffset() {
+  offsetCount++;
+  const div = document.createElement('div');
+  div.className = 'coords-row';
+  div.innerHTML = `
+    <span>#${offsetCount}</span>
+    <input type="number" step="any" placeholder="দূরত্ব (লিংক)" class="od">
+    <input type="number" step="any" placeholder="অফসেট (লিংক)" class="oo">
+    <button class="btn-small" onclick="this.parentNode.remove()">✕</button>`;
+  document.getElementById('offset-list').appendChild(div);
+}
+addOffset(); addOffset();
+function calcLinkOffset() {
+  const rows = document.querySelectorAll('#offset-list .coords-row');
+  const data = [];
+  rows.forEach(r => {
+    const d = parseFloat(r.querySelector('.od').value);
+    const o = parseFloat(r.querySelector('.oo').value);
+    if (!isNaN(d) && !isNaN(o)) data.push({ d, o });
+  });
+  if (data.length < 2) {
+    document.getElementById('link-error').textContent = 'কমপক্ষে ২টি বিন্দু দিন।';
+    document.getElementById('link-error').classList.add('show'); return;
+  }
+  let areaLink = 0;
+  for (let i = 0; i < data.length-1; i++) {
+    const avgOff = (data[i].o + data[i+1].o)/2;
+    const distLink = data[i+1].d - data[i].d;
+    areaLink += avgOff * distLink;
+  }
+  const areaSqm = areaLink * LINK_TO_METER * LINK_TO_METER;
+  document.getElementById('link-error').classList.remove('show');
+  const dg = (sqm) => {
+    clearDiagram();
+    const svg = document.getElementById('diagram-svg');
+    if (!svg) return;
+    const W = 320, H = 220, PAD = 30;
+    const totalDist = (data[data.length-1].d - data[0].d) || 1;
+    const maxOff = Math.max(...data.map(p=>p.o)) || 1;
+    const scaleX = (W-2*PAD)/totalDist, scaleY = (H-2*PAD)/(maxOff*1.2);
+    const baseY = H-PAD;
+    const xAt = d => PAD + (d-data[0].d)*scaleX;
+    svg.appendChild(svgEl('line', { x1:PAD, y1:baseY, x2:W-PAD, y2:baseY, stroke:'#718096', 'stroke-width':2, 'stroke-dasharray':'4,3' }));
+    const topPts = [];
+    data.forEach(p => {
+      const x = xAt(p.d), y = baseY - p.o*scaleY;
+      topPts.push([x,y]);
+      svg.appendChild(svgEl('line', { x1:x, y1:baseY, x2:x, y2:y, stroke:'#2f855a', 'stroke-width':1.5 }));
+      svg.appendChild(svgEl('circle', { cx:x, cy:y, r:3, fill:'#2f855a' }));
+      svg.appendChild(svgEl('text', { x:x+4, y:y-4, 'font-size':'8', fill:'#1e4d2b' }, linkLabel(p.o)));
+    });
+    const dPath = topPts.map((p,i)=>(i===0?'M':'L')+p[0]+','+p[1]).join(' ');
+    svg.appendChild(svgEl('path', { d:dPath, fill:'none', stroke:'#2f855a', 'stroke-width':2 }));
+    svg.appendChild(svgEl('text', { x:W/2, y:20, 'text-anchor':'middle', 'font-size':'10', 'font-weight':'800', fill:'#22543d' }, areaLabel(sqm)));
+  };
+  dg.diagramData = { type:'offset', points: data.map(p=>[p.d, p.o]) };
+  showArea(areaSqm, 'লিংক অফসেট', `${data.length}টি বিন্দু`, dg);
+}
+function calcLinkTri() {
+  const a = parseFloat(document.getElementById('lt-a').value);
+  const b = parseFloat(document.getElementById('lt-b').value);
+  const c = parseFloat(document.getElementById('lt-c').value);
+  if ([a,b,c].some(v=>isNaN(v)||v<=0)) {
+    document.getElementById('link-error').textContent = 'তিনটি বাহুর লিংক সংখ্যা দিন।';
+    document.getElementById('link-error').classList.add('show'); return;
+  }
+  const areaLink = heron(a,b,c);
+  const areaSqm = areaLink * LINK_TO_METER * LINK_TO_METER;
+  document.getElementById('link-error').classList.remove('show');
+  const pts = trianglePoints(a,b,c);
+  const labels = ['a='+linkLabel(a),'c='+linkLabel(c),'b='+linkLabel(b)];
+  const dg = (sqm) => drawShape(pts, labels, areaLabel(sqm));
+  dg.diagramData = { type:'poly', points:pts, labels };
+  showArea(areaSqm, 'লিংক ত্রিভুজ', `বাহু: ${a}, ${b}, ${c} লিংক`, dg);
+}
+function calcLinkAngle() {
+  const a = parseFloat(document.getElementById('la-a').value);
+  const b = parseFloat(document.getElementById('la-b').value);
+  const deg = parseFloat(document.getElementById('la-angle').value);
+  if ([a,b,deg].some(v=>isNaN(v))) {
+    document.getElementById('link-error').textContent = 'দুই বাহু ও কোণ দিন।';
+    document.getElementById('link-error').classList.add('show'); return;
+  }
+  const areaLink = 0.5*a*b*Math.sin(deg*Math.PI/180);
+  const areaSqm = areaLink * LINK_TO_METER * LINK_TO_METER;
+  document.getElementById('link-error').classList.remove('show');
+  const pts = (() => {
+    const A = [0,0], B = [a,0];
+    const rad = deg*Math.PI/180;
+    return [A, B, [b*Math.cos(rad), b*Math.sin(rad)]];
+  })();
+  const labels = ['a='+linkLabel(a),'c=?','b='+linkLabel(b)];
+  const dg = (sqm) => drawShape(pts, labels, areaLabel(sqm));
+  dg.diagramData = { type:'poly', points:pts, labels };
+  showArea(areaSqm, 'লিংক বাহু+কোণ', `বাহু: ${a}, ${b} | কোণ: ${deg}°`, dg);
+}
+
+/* ================= একক রূপান্তর ================= */
+function doConvert() {
+  const val = parseFloat(document.getElementById('conv-val').value);
+  const unit = document.getElementById('conv-unit').value;
+  const box = document.getElementById('conv-result');
+  if (isNaN(val) || val <= 0) { box.classList.remove('show'); return; }
+  let sqm;
+  switch(unit) {
+    case 'sqm': sqm = val; break;
+    case 'sqft': sqm = val*SQM_PER_SQFT; break;
+    case 'shotok': sqm = val*SQM_PER_SHOTOK; break;
+    case 'katha': sqm = val*SHOTOK_PER_KATHA*SQM_PER_SHOTOK; break;
+    case 'bigha': sqm = val*KATHA_PER_BIGHA*SHOTOK_PER_KATHA*SQM_PER_SHOTOK; break;
+    case 'acre': sqm = val*SQM_PER_ACRE; break;
+    case 'hectare': sqm = val*SQM_PER_HECTARE; break;
+  }
+  const shotok = sqm/SQM_PER_SHOTOK;
+  const katha = shotok/SHOTOK_PER_KATHA;
+  const bigha = katha/KATHA_PER_BIGHA;
+  const acre = sqm/SQM_PER_ACRE;
+  const sqft = sqm/SQM_PER_SQFT;
+  const hectare = sqm/SQM_PER_HECTARE;
+  document.getElementById('c-sqft').textContent = fmt(sqft);
+  document.getElementById('c-sqm').textContent = fmt(sqm);
+  document.getElementById('c-shotok').textContent = fmt(shotok);
+  document.getElementById('c-katha').textContent = fmt(katha);
+  document.getElementById('c-bigha').textContent = fmt(bigha);
+  document.getElementById('c-acre').textContent = fmt(acre);
+  document.getElementById('c-hectare').textContent = fmt(hectare);
+  box.classList.add('show');
+}
+
+/* ================= ইতিহাস ================= */
+const HISTORY_KEY = 'landCalcHistory';
+const HISTORY_MAX = 20;
+function saveHistory(label, detail, sqm, diagram) {
+  let history = loadHistory();
+  const entry = {
+    label, detail,
+    sqft: sqm/SQM_PER_SQFT, sqm,
+    shotok: sqm/SQM_PER_SHOTOK,
+    katha: (sqm/SQM_PER_SHOTOK)/SHOTOK_PER_KATHA,
+    bigha: ((sqm/SQM_PER_SHOTOK)/SHOTOK_PER_KATHA)/KATHA_PER_BIGHA,
+    acre: sqm/SQM_PER_ACRE,
+    time: formatBanglaDate(new Date()),
+    diagram: diagram || null
+  };
+  history.unshift(entry);
+  if (history.length > HISTORY_MAX) history = history.slice(0, HISTORY_MAX);
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch(e) {}
+  renderHistory();
+}
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch(e) { return []; }
+}
+function clearHistory() {
+  if (!confirm('সব ইতিহাস মুছে ফেলবেন?')) return;
+  localStorage.removeItem(HISTORY_KEY);
+  renderHistory();
+}
+function toggleHistoryDetail(i) {
+  const el = document.getElementById('hist-detail-' + i);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  const history = loadHistory();
+  if (history.length === 0) { list.innerHTML = '<p class="hint">এখনো কোনো গণনা সংরক্ষিত হয়নি।</p>'; return; }
+  list.innerHTML = history.map((h,i) => {
+    const shotok = h.sqm/SQM_PER_SHOTOK;
+    const katha = shotok/SHOTOK_PER_KATHA;
+    return `
+    <div class="coords-row" style="padding:10px 0;border-bottom:1px dashed #e2e8f0;cursor:pointer;" onclick="toggleHistoryDetail(${i})">
+      <div style="flex:1;">
+        <div style="font-weight:700;font-size:.85rem;color:#22543d;">${h.label}</div>
+        <div style="font-size:.75rem;color:#718096;">${h.detail}</div>
+        <div style="font-size:.85rem;font-weight:700;color:#2f855a;margin-top:4px;">📅 ${displayTime(h.time)}</div>
+      </div>
+      <div style="text-align:right;min-width:120px;">
+        <div style="font-weight:800;color:#2f855a;font-size:.9rem;">${fmt(shotok)} শতাংশ</div>
+        <div style="font-size:.75rem;font-weight:600;color:#4a5568;">≈ ${fmt(katha)} কাঠা</div>
+        <button class="btn-small" style="margin-top:4px;font-size:.7rem;padding:3px 8px;"
+          onclick="event.stopPropagation(); printHistoryEntry(${i})">🖨️ প্রিন্ট</button>
+      </div>
+    </div>
+    <div id="hist-detail-${i}" style="display:none;background:#f0fff4;border-radius:8px;padding:10px;margin:4px 0 10px;">
+      <table style="width:100%;font-size:.8rem;border-collapse:collapse;">
+        <tr><td style="padding:3px 0;">শতাংশ</td><td style="text-align:right;font-weight:700;">${fmt(shotok)}</td></tr>
+        <tr><td style="padding:3px 0;">কাঠা</td><td style="text-align:right;font-weight:700;">${fmt(katha)}</td></tr>
+        <tr><td style="padding:3px 0;">বর্গফুট</td><td style="text-align:right;font-weight:700;">${fmt(h.sqft)}</td></tr>
+        <tr><td style="padding:3px 0;">বর্গমিটার</td><td style="text-align:right;font-weight:700;">${fmt(h.sqm)}</td></tr>
+        <tr><td style="padding:3px 0;">বিঘা</td><td style="text-align:right;font-weight:700;">${fmt(h.bigha)}</td></tr>
+        <tr><td style="padding:3px 0;">একর</td><td style="text-align:right;font-weight:700;">${fmt(h.acre)}</td></tr>
+      </table>
+    </div>
+    `;
+  }).join('');
+}
+
+/* ================= প্রিন্ট ================= */
+function drawDiagramInto(containerId, data, sqm) {
+  const box = document.getElementById(containerId);
+  if (!box) return;
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('width','100%');
+  svg.setAttribute('height','200');
+  svg.setAttribute('viewBox','0 0 320 200');
+  svg.setAttribute('style','max-width:360px;-webkit-print-color-adjust:exact;print-color-adjust:exact;');
+  box.appendChild(svg);
+  const W = 320, H = 200, PAD = 30;
+  const areaText = areaLabel(sqm);
+  if (data.type === 'poly' && data.points) {
+    const fitted = fitPoints(data.points, W, H, PAD);
+    const d = fitted.map((p,i)=>(i===0?'M':'L')+p[0]+','+p[1]).join(' ')+' Z';
+    svg.appendChild(svgEl('path', { d, fill:'rgba(47,133,90,.12)', stroke:'#2f855a', 'stroke-width':2 }));
+    if (data.labels && data.labels.length === fitted.length) {
+      for (let i = 0; i < fitted.length; i++) {
+        const p1 = fitted[i], p2 = fitted[(i+1)%fitted.length];
+        const mx = (p1[0]+p2[0])/2, my = (p1[1]+p2[1])/2;
+        svg.appendChild(svgEl('text', { x:mx, y:my-6, 'text-anchor':'middle', 'font-size':'9', 'font-weight':'700', fill:'#1e4d2b' }, data.labels[i]));
+      }
+    }
+    const cx = fitted.reduce((s,p)=>s+p[0],0)/fitted.length;
+    const cy = fitted.reduce((s,p)=>s+p[1],0)/fitted.length;
+    svg.appendChild(svgEl('text', { x:cx, y:cy+4, 'text-anchor':'middle', 'font-size':'9', 'font-weight':'800', fill:'#22543d' }, areaText));
+  } else if (data.type === 'offset' && data.points) {
+    const totalDist = (data.points[data.points.length-1][0]-data.points[0][0]) || 1;
+    const maxOff = Math.max(...data.points.map(p=>p[1])) || 1;
+    const scaleX = (W-2*PAD)/totalDist, scaleY = (H-2*PAD)/(maxOff*1.2);
+    const baseY = H-PAD;
+    const xAt = d => PAD + (d-data.points[0][0])*scaleX;
+    svg.appendChild(svgEl('line', { x1:PAD, y1:baseY, x2:W-PAD, y2:baseY, stroke:'#718096', 'stroke-width':2, 'stroke-dasharray':'4,3' }));
+    const topPts = [];
+    data.points.forEach(([dd,oo]) => {
+      const x = xAt(dd), y = baseY - oo*scaleY;
+      topPts.push([x,y]);
+      svg.appendChild(svgEl('line', { x1:x, y1:baseY, x2:x, y2:y, stroke:'#2f855a', 'stroke-width':1.5 }));
+      svg.appendChild(svgEl('circle', { cx:x, cy:y, r:3, fill:'#2f855a' }));
+      svg.appendChild(svgEl('text', { x:x+4, y:y-4, 'font-size':'8', fill:'#1e4d2b' }, linkLabel(oo)));
+    });
+    const dPath = topPts.map((p,i)=>(i===0?'M':'L')+p[0]+','+p[1]).join(' ');
+    svg.appendChild(svgEl('path', { d:dPath, fill:'none', stroke:'#2f855a', 'stroke-width':2 }));
+    svg.appendChild(svgEl('text', { x:W/2, y:16, 'text-anchor':'middle', 'font-size':'10', 'font-weight':'800', fill:'#22543d' }, areaText));
+  }
+}
+function printResult() {
+  const resultBox = document.getElementById('area-result');
+  if (!resultBox.classList.contains('show')) { alert('আগে একটি গণনা করুন।'); return; }
+  const printArea = document.createElement('div');
+  printArea.id = 'print-area';
+  const title = document.createElement('h2');
+  title.textContent = 'ভূমি জরিপ ক্যালকুলেটর — ফলাফল';
+  title.style.cssText = 'text-align:center;color:#1e4d2b;margin-bottom:4px;font-size:1.2rem;';
+  printArea.appendChild(title);
+  const date = document.createElement('p');
+  date.textContent = 'তারিখ: ' + formatBanglaDate(new Date());
+  date.style.cssText = 'text-align:center;font-size:.85rem;font-weight:700;color:#2f855a;margin-bottom:12px;';
+  printArea.appendChild(date);
+  const clone = resultBox.cloneNode(true);
+  clone.querySelectorAll('button').forEach(b => b.remove());
+  clone.style.display = 'block';
+  printArea.appendChild(clone);
+  document.body.appendChild(printArea);
+  window.print();
+  setTimeout(() => printArea.remove(), 500);
+}
+function printHistoryEntry(i) {
+  const history = loadHistory();
+  const h = history[i];
+  if (!h) return;
+  const shotok = h.sqm/SQM_PER_SHOTOK;
+  const katha = shotok/SHOTOK_PER_KATHA;
+  const printArea = document.createElement('div');
+  printArea.id = 'print-area';
+  printArea.innerHTML = `
+    <h2 style="text-align:center;color:#1e4d2b;margin-bottom:4px;font-size:1.2rem;">ভূমি জরিপ ক্যালকুলেটর — ফলাফল</h2>
+    <p style="text-align:center;font-size:.95rem;font-weight:700;color:#2f855a;margin-bottom:12px;">📅 ${displayTime(h.time)}</p>
+    <div style="background:#f0fff4;border:1.5px solid #9ae6b4;border-radius:8px;padding:12px;">
+      <div style="font-size:1.1rem;font-weight:800;color:#22543d;text-align:center;margin-bottom:8px;">${h.label}</div>
+      <p style="font-size:.8rem;color:#718096;text-align:center;margin-bottom:8px;">${h.detail}</p>
+      <div id="print-svg-box" style="text-align:center;margin-bottom:8px;"></div>
+      <table style="width:100%;font-size:.85rem;border-collapse:collapse;">
+        <tr><td style="padding:4px 0;">শতাংশ</td><td style="text-align:right;font-weight:700;">${fmt(shotok)}</td></tr>
+        <tr><td style="padding:4px 0;">কাঠা</td><td style="text-align:right;font-weight:700;">${fmt(katha)}</td></tr>
+        <tr><td style="padding:4px 0;">বর্গফুট</td><td style="text-align:right;font-weight:700;">${fmt(h.sqft)}</td></tr>
+        <tr><td style="padding:4px 0;">বর্গমিটার</td><td style="text-align:right;font-weight:700;">${fmt(h.sqm)}</td></tr>
+        <tr><td style="padding:4px 0;">বিঘা</td><td style="text-align:right;font-weight:700;">${fmt(h.bigha)}</td></tr>
+        <tr><td style="padding:4px 0;">একর</td><td style="text-align:right;font-weight:700;">${fmt(h.acre)}</td></tr>
+      </table>
+    </div>`;
+  document.body.appendChild(printArea);
+  if (h.diagram) drawDiagramInto('print-svg-box', h.diagram, h.sqm);
+  window.print();
+  setTimeout(() => printArea.remove(), 500);
+}
+function printAllHistory() {
+  let history = loadHistory();
+  if (history.length === 0) { alert('ইতিহাসে কোনো গণনা নেই।'); return; }
+  const countVal = document.getElementById('print-count').value;
+  if (countVal !== 'all') history = history.slice(0, parseInt(countVal));
+  const printArea = document.createElement('div');
+  printArea.id = 'print-area';
+  const title = document.createElement('h2');
+  title.textContent = 'ভূমি জরিপ ক্যালকুলেটর — ফলাফল';
+  title.style.cssText = 'text-align:center;color:#1e4d2b;margin-bottom:4px;font-size:1.2rem;';
+  printArea.appendChild(title);
+  const date = document.createElement('p');
+  date.textContent = `প্রিন্টের তারিখ: ${formatBanglaDate(new Date())} | মোট ${history.length}টি গণনা`;
+  date.style.cssText = 'text-align:center;font-size:.8rem;color:#718096;margin-bottom:16px;';
+  printArea.appendChild(date);
+  history.forEach((h,idx) => {
+    const shotok = h.sqm/SQM_PER_SHOTOK;
+    const katha = shotok/SHOTOK_PER_KATHA;
+    const block = document.createElement('div');
+    block.style.cssText = 'background:#f0fff4;border:1.5px solid #9ae6b4;border-radius:8px;padding:12px;margin-bottom:14px;page-break-inside:avoid;';
+    block.innerHTML = `
+      <div style="border-bottom:1px solid #c6f6d5;padding-bottom:6px;margin-bottom:8px;">
+        <div style="font-size:.95rem;font-weight:800;color:#2f855a;margin-bottom:2px;">📅 ${displayTime(h.time)}</div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <div style="font-size:1rem;font-weight:800;color:#22543d;">${h.label}</div>
+          <div style="font-size:.75rem;color:#718096;">${h.detail}</div>
+        </div>
+      </div>
+      <div class="svg-holder" data-idx="${idx}" style="text-align:center;margin-bottom:8px;"></div>
+      <table style="width:100%;font-size:.8rem;border-collapse:collapse;">
+        <tr><td style="padding:3px 0;">শতাংশ</td><td style="text-align:right;font-weight:700;">${fmt(shotok)}</td></tr>
+        <tr><td style="padding:3px 0;">কাঠা</td><td style="text-align:right;font-weight:700;">${fmt(katha)}</td></tr>
+        <tr><td style="padding:3px 0;">বর্গফুট</td><td style="text-align:right;font-weight:700;">${fmt(h.sqft)}</td></tr>
+        <tr><td style="padding:3px 0;">বর্গমিটার</td><td style="text-align:right;font-weight:700;">${fmt(h.sqm)}</td></tr>
+        <tr><td style="padding:3px 0;">বিঘা</td><td style="text-align:right;font-weight:700;">${fmt(h.bigha)}</td></tr>
+        <tr><td style="padding:3px 0;">একর</td><td style="text-align:right;font-weight:700;">${fmt(h.acre)}</td></tr>
+      </table>`;
+    printArea.appendChild(block);
+  });
+  document.body.appendChild(printArea);
+  history.forEach((h,idx) => {
+    if (h.diagram) {
+      const holder = printArea.querySelector(`.svg-holder[data-idx="${idx}"]`);
+      if (holder) { holder.id = 'all-svg-' + idx; drawDiagramInto('all-svg-' + idx, h.diagram, h.sqm); }
+    }
+  });
+  window.print();
+  setTimeout(() => printArea.remove(), 500);
+}
+
+/* ================= ট্যাব ================= */
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const card = tab.closest('.card');
+    card.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    card.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    tab.classList.add('active');
+    const target = card.querySelector('#sec-' + tab.dataset.tab);
+    if (target) target.classList.add('active');
+    hideResult();
+  });
+});
+
+/* ================= বিন্দু ================= */
+function addCoord() {
+  const count = document.querySelectorAll('#coord-list .coords-row').length + 1;
+  const div = document.createElement('div');
+  div.className = 'coords-row';
+  div.innerHTML = `
+    <span>বিন্দু ${count}</span>
+    <input type="number" step="any" placeholder="x" class="cx">
+    <input type="number" step="any" placeholder="y" class="cy">
+    <button class="btn-small" onclick="this.parentNode.remove()">✕</button>`;
+  document.getElementById('coord-list').appendChild(div);
+}
+addCoord(); addCoord(); addCoord();
+
+/* ================= PWA ================= */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(() => console.log('Service Worker চালু হয়েছে'))
+      .catch(err => console.log('SW রেজিস্ট্রেশন ব্যর্থ:', err));
+  });
+}
+
+/* ================= শুরু ================= */
+updateScaleInfo();
+renderHistory();
+</script>
+
+</body>
+</html>
